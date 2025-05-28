@@ -114,7 +114,7 @@ type DefaultCalculator struct {
 
 // MinSleep sets the minimum sleep time
 func MinSleep(t time.Duration) Option {
-	return func(p *pacerOptions) { 
+	return func(p *pacerOptions) {
 		if c, ok := p.calculator.(*DefaultCalculator); ok {
 			c.minSleep = t
 		}
@@ -123,7 +123,7 @@ func MinSleep(t time.Duration) Option {
 
 // MaxSleep sets the maximum sleep time
 func MaxSleep(t time.Duration) Option {
-	return func(p *pacerOptions) { 
+	return func(p *pacerOptions) {
 		if c, ok := p.calculator.(*DefaultCalculator); ok {
 			c.maxSleep = t
 		}
@@ -132,7 +132,7 @@ func MaxSleep(t time.Duration) Option {
 
 // DecayConstant sets the decay constant
 func DecayConstant(t uint) Option {
-	return func(p *pacerOptions) { 
+	return func(p *pacerOptions) {
 		if c, ok := p.calculator.(*DefaultCalculator); ok {
 			c.decayConstant = t
 		}
@@ -141,7 +141,7 @@ func DecayConstant(t uint) Option {
 
 // Burst sets the burst count
 func Burst(t int) Option {
-	return func(p *pacerOptions) { 
+	return func(p *pacerOptions) {
 		if c, ok := p.calculator.(*DefaultCalculator); ok {
 			c.burst = t
 		}
@@ -198,8 +198,8 @@ func DefaultInvoker(try, tries int, paced Paced) (bool, error) {
 // last call of f.
 func (p *Pacer) Call(f Paced) error {
 	var (
-		err         error
-		again       bool
+		err                error
+		again              bool
 		consecutiveRetries int
 	)
 
@@ -228,7 +228,7 @@ func (p *Pacer) Call(f Paced) error {
 		sleepTime := p.calculator.Calculate(p.state)
 		p.state.SleepTime = sleepTime
 		p.mu.Unlock()
-		
+
 		// If the retry function returned true, indicate consecutive retries
 		if again {
 			consecutiveRetries++

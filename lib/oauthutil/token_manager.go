@@ -32,6 +32,11 @@ func NewTokenManager(configDir, name string) *TokenManager {
 	}
 }
 
+// SetPassword sets the password for token encryption (primarily for testing)
+func (tm *TokenManager) SetPassword(password string) {
+	tm.password = password
+}
+
 // LoadToken loads a token from the configured path
 func (tm *TokenManager) LoadToken(ctx context.Context) (*oauth2.Token, error) {
 	// Check if token file exists

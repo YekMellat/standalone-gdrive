@@ -19,13 +19,13 @@ import (
 
 // Error definitions
 var (
-	InvalidCharacters      = errors.New("path contains invalid characters")
-	DirectoryNotFound      = errors.New("directory not found")
-	FileNotFound           = errors.New("file not found")
-	AlreadyExists          = errors.New("item already exists")
-	NotAFile               = errors.New("not a file")
-	NotADirectory          = errors.New("not a directory")
-	ItemIsDirectory        = errors.New("item is a directory")
+	InvalidCharacters          = errors.New("path contains invalid characters")
+	DirectoryNotFound          = errors.New("directory not found")
+	FileNotFound               = errors.New("file not found")
+	AlreadyExists              = errors.New("item already exists")
+	NotAFile                   = errors.New("not a file")
+	NotADirectory              = errors.New("not a directory")
+	ItemIsDirectory            = errors.New("item is a directory")
 	ErrorDriveFolderNotFound   = errors.New("drive folder not found")
 	ErrorDriveFileNotFound     = errors.New("drive file not found")
 	ErrorGoogleDriveTokenEmpty = errors.New("oauth token empty - please run authorize command")
@@ -52,7 +52,7 @@ func shouldRetry(ctx context.Context, err error) (bool, error) {
 		if gerr.Code == 403 && strings.Contains(gerr.Message, "rateLimitExceeded") {
 			return true, err
 		}
-		
+
 		// Quota exceeded errors
 		if gerr.Code == 403 && strings.Contains(gerr.Message, "userRateLimitExceeded") {
 			return false, fs.ErrorLimitExceeded
@@ -60,7 +60,7 @@ func shouldRetry(ctx context.Context, err error) (bool, error) {
 		if gerr.Code == 403 && strings.Contains(gerr.Message, "Quota exceeded") {
 			return false, fs.ErrorLimitExceeded
 		}
-		
+
 		// Server error codes
 		if gerr.Code == 500 || gerr.Code == 502 || gerr.Code == 503 || gerr.Code == 504 {
 			return true, err
@@ -90,7 +90,7 @@ func shouldRetry(ctx context.Context, err error) (bool, error) {
 	if errors.Is(err, io.EOF) {
 		return true, err
 	}
-	
+
 	// Generic HTTP errors
 	if strings.Contains(err.Error(), "429 Too Many Requests") {
 		return true, err
@@ -107,7 +107,7 @@ func shouldRetry(ctx context.Context, err error) (bool, error) {
 	if strings.Contains(err.Error(), "connection reset by peer") {
 		return true, err
 	}
-	
+
 	// Default: don't retry
 	return false, err
 }
@@ -144,7 +144,7 @@ func translateError(err error, item string) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// Check for Google API errors
 	var gerr *googleapi.Error
 	if errors.As(err, &gerr) {
@@ -185,7 +185,7 @@ func ProcessError(err error) error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// Check if it's a Google API specific error
 	if apiErr, ok := err.(*googleapi.Error); ok {
 		switch apiErr.Code {
@@ -199,7 +199,7 @@ func ProcessError(err error) error {
 			return fmt.Errorf("API error: %v", apiErr.Message)
 		}
 	}
-		// Check for other specific error types
+	// Check for other specific error types
 	switch {
 	case err.Error() == "oauth2: token expired and refresh token is not set":
 		return ErrorGoogleDriveTokenEmpty
@@ -208,6 +208,6 @@ func ProcessError(err error) error {
 	case strings.Contains(err.Error(), "invalid_grant"):
 		return fmt.Errorf("invalid or expired refresh token: %w", ErrorAuthorizationFailed)
 	}
-	
+
 	return err
 }

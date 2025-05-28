@@ -42,10 +42,9 @@ func TestMain(m *testing.M) {
 		fmt.Println("Failed to convert to drive.Fs type")
 		os.Exit(1)
 	}
-
 	// Create a test folder with timestamp to avoid conflicts
 	folderName := fmt.Sprintf("integration-test-%s", time.Now().Format("20060102150405"))
-	dir, err := testFs.Mkdir(ctx, folderName)
+	err = testFs.Mkdir(ctx, folderName)
 	if err != nil {
 		fmt.Printf("Failed to create test folder: %v\n", err)
 		os.Exit(1)
@@ -87,15 +86,14 @@ func TestFileUploadAndDownload(t *testing.T) {
 	destPath := fmt.Sprintf("%s/%s", testFolderID, filepath.Base(tmpFile.Name()))
 
 	f, err := testFs.NewObject(ctx, destPath)
-	if err == fs.ErrorObjectNotFound {
-		// File doesn't exist, need to create it
+	if err == fs.ErrorObjectNotFound { // File doesn't exist, need to create it
 		in, err := os.Open(tmpFile.Name())
 		require.NoError(t, err)
 		defer in.Close()
-		f, err = testFs.Put(ctx, in, fs.ObjectInfoImpl{
-			Remote:  destPath,
-			Size:    int64(len(content)),
-			ModTime: time.Now(),
+		f, err = testFs.Put(ctx, in, &fs.ObjectInfoImpl{
+			RemoteName:  destPath,
+			FileSize:    int64(len(content)),
+			FileModTime: time.Now(),
 		})
 		require.NoError(t, err)
 	} else {
@@ -132,10 +130,9 @@ func TestFileUploadAndDownload(t *testing.T) {
 
 func TestFolderOperations(t *testing.T) {
 	ctx := context.Background()
-
 	// Create a subfolder
 	subfolderName := fmt.Sprintf("%s/test-subfolder", testFolderID)
-	_, err := testFs.Mkdir(ctx, subfolderName)
+	err := testFs.Mkdir(ctx, subfolderName)
 	require.NoError(t, err)
 
 	// List folders and verify

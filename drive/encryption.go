@@ -18,10 +18,10 @@ import (
 
 // Errors for encryption operations
 var (
-	ErrInvalidKey          = errors.New("invalid encryption key")
-	ErrEncryptionFailed    = errors.New("encryption failed")
-	ErrDecryptionFailed    = errors.New("decryption failed")
-	ErrInvalidCiphertext   = errors.New("invalid ciphertext")
+	ErrInvalidKey        = errors.New("invalid encryption key")
+	ErrEncryptionFailed  = errors.New("encryption failed")
+	ErrDecryptionFailed  = errors.New("decryption failed")
+	ErrInvalidCiphertext = errors.New("invalid ciphertext")
 )
 
 // EncryptFile encrypts the source file and writes it to the destination
@@ -76,10 +76,10 @@ func EncryptFile(sourcePath, destPath, password string) error {
 	useProgress := isTerminalFunc() && sourceInfo.Size() > 0
 
 	var reader io.Reader = source
-	
+
 	if useProgress {
 		// Create a progress tracking wrapper around the reader
-		progressReader := NewProgressReader(source, sourceInfo.Size(), 
+		progressReader := NewProgressReader(source, sourceInfo.Size(),
 			DefaultProgressPrinter(fmt.Sprintf("Encrypting %s", sourcePath)))
 		reader = progressReader
 	}
@@ -140,12 +140,12 @@ func DecryptFile(sourcePath, destPath, password string) error {
 
 	// Use progress tracking for decryption
 	useProgress := isTerminalFunc() && sourceInfo.Size() > aes.BlockSize
-	
+
 	var reader io.Reader = decryptReader
-	
+
 	if useProgress {
 		// Create a progress tracking wrapper around the reader
-		progressReader := NewProgressReader(decryptReader, sourceInfo.Size()-aes.BlockSize, 
+		progressReader := NewProgressReader(decryptReader, sourceInfo.Size()-aes.BlockSize,
 			DefaultProgressPrinter(fmt.Sprintf("Decrypting %s", sourcePath)))
 		reader = progressReader
 	}

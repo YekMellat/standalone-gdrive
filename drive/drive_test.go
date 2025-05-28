@@ -4,6 +4,7 @@ package drive
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -97,15 +98,14 @@ func TestDriveFsOperations(t *testing.T) {
 	if !found {
 		t.Errorf("Created directory not found in listing")
 	}
-
 	// Test file upload
 	content := []byte("This is test content for Google Drive upload test")
 	contentReader := bytes.NewReader(content)
 	testFileName := "test-file-" + time.Now().Format("150405") + ".txt"
 	info := &fs.ObjectInfoImpl{
-		Remote:  testFileName,
-		Size:    int64(len(content)),
-		ModTime: time.Now(),
+		RemoteName:  testFileName,
+		FileSize:    int64(len(content)),
+		FileModTime: time.Now(),
 	}
 
 	obj, err := driveFs.Put(ctx, contentReader, info, nil)
@@ -145,6 +145,14 @@ func TestDriveFsOperations(t *testing.T) {
 	if err == nil {
 		t.Errorf("Object still exists after deletion")
 	}
+}
+
+func exportResourceKeys(resourceKeys map[string]string) string {
+	var parts []string
+	for fileID, resourceKey := range resourceKeys {
+		parts = append(parts, fmt.Sprintf("%s:%s", fileID, resourceKey))
+	}
+	return strings.Join(parts, ",")
 }
 
 func TestResourceKeyHandling(t *testing.T) {
@@ -215,12 +223,11 @@ func TestTokenEncryption(t *testing.T) {
 			t.Errorf("AccessToken mismatch: expected %s, got %s", token.AccessToken, loaded.AccessToken)
 		}
 	})
-
 	// Test 2: Save and load encrypted token
 	t.Run("EncryptedToken", func(t *testing.T) {
 		// Set password for encryption
 		password := "test-password"
-		tokenManager.password = password
+		tokenManager.SetPassword(password)
 
 		// Save token (encrypted)
 		if err := tokenManager.SaveToken(token); err != nil {
@@ -247,10 +254,9 @@ func TestTokenEncryption(t *testing.T) {
 		if loaded.AccessToken != token.AccessToken {
 			t.Errorf("AccessToken mismatch: expected %s, got %s", token.AccessToken, loaded.AccessToken)
 		}
-
 		// Try to load with wrong password
 		wrongTokenManager := oauthutil.NewTokenManager(tempDir, "gdrive")
-		wrongTokenManager.password = "wrong-password"
+		wrongTokenManager.SetPassword("wrong-password")
 		_, err = wrongTokenManager.LoadToken(context.Background())
 		if err == nil {
 			t.Errorf("Expected error when loading with wrong password, but got none")

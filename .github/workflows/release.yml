@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ env.GO_VERSION }}-
+
+    - name: Download dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Build binaries for all platforms
+      run: |
+        mkdir -p dist
+        
+        # Build for different platforms
+        platforms=("linux/amd64" "linux/arm64" "windows/amd64" "darwin/amd64" "darwin/arm64")
+        
+        for platform in "${platforms[@]}"; do
+          os=$(echo $platform | cut -d'/' -f1)
+          arch=$(echo $platform | cut -d'/' -f2)
+          
+          echo "Building for $os/$arch..."
+          
+          binary_name="gdrive"
+          token_name="token"
+          oauth_name="oauth_test"
+          
+          if [ "$os" = "windows" ]; then
+            binary_name="gdrive.exe"
+            token_name="token.exe"
+            oauth_name="oauth_test.exe"
+          fi
+          
+          # Create platform-specific directory
+          platform_dir="dist/standalone-gdrive-$os-$arch"
+          mkdir -p "$platform_dir"
+          
+          # Build binaries
+          GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w -X github.com/standalone-gdrive/version.Version=${GITHUB_REF#refs/tags/}" -o "$platform_dir/$binary_name" ./cmd/gdrive
+          GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o "$platform_dir/$token_name" ./cmd/token
+          GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o "$platform_dir/$oauth_name" ./cmd/oauth_test
+          
+          # Copy documentation
+          cp README.md "$platform_dir/"
+          cp -r docs "$platform_dir/"
+          cp -r examples "$platform_dir/"
+          
+          # Create archive
+          cd dist
+          if [ "$os" = "windows" ]; then
+            zip -r "standalone-gdrive-$os-$arch.zip" "standalone-gdrive-$os-$arch"
+          else
+            tar -czf "standalone-gdrive-$os-$arch.tar.gz" "standalone-gdrive-$os-$arch"
+          fi
+          cd ..
+        done
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          # Extract changelog for this version
+          awk '/^## \[/{if(p) exit; if(/\['"${GITHUB_REF#refs/tags/}"'\]/) p=1; next} p' CHANGELOG.md > release_notes.md
+        else
+          # Generate simple changelog from git commits
+          echo "## Changes" > release_notes.md
+          echo "" >> release_notes.md
+          git log --oneline $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> release_notes.md
+        fi
+        
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        cat release_notes.md >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: ${{ steps.changelog.outputs.changelog }}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets
+      run: |
+        for file in dist/*.zip dist/*.tar.gz; do
+          if [ -f "$file" ]; then
+            echo "Uploading $file..."
+            gh release upload ${{ github.ref }} "$file"
+          fi
+        done
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker-release:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: release
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository }}
+        tags: |
+          type=ref,event=tag
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ github.ref_name }}

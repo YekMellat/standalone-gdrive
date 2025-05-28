@@ -6,10 +6,10 @@ import (
 
 // Option is describes an option for the config system
 type Option struct {
-	Name     string       // name of the option in snake_case
-	Help     string       // Help text - may contain newlines, will be wrapped
-	Provider string       // Set to filter on provider
-	Default  interface{}  // default value, nil => ""
+	Name     string      // name of the option in snake_case
+	Help     string      // Help text - may contain newlines, will be wrapped
+	Provider string      // Set to filter on provider
+	Default  interface{} // default value, nil => ""
 	Examples []OptionExample
 }
 
