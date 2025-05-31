@@ -242,10 +242,42 @@ func (f *Fs) shouldRetry(ctx context.Context, err error) (bool, error) {
 	return false, err
 }
 
-// parseParse parses a drive 'url'
-func parseDrivePath(path string) (root string, err error) {
-	root = strings.Trim(path, "/")
-	return
+// parseDrivePath parses a drive 'url' and validates the path
+func parseDrivePath(inputPath string) (root string, err error) {
+	// Handle special cases
+	if inputPath == "." {
+		return "", nil
+	}
+
+	// Clean the path using path.Clean (not filepath.Clean) to keep forward slashes
+	cleaned := strings.Trim(path.Clean(inputPath), "/")
+
+	// Check for invalid characters
+	if strings.ContainsAny(cleaned, "*?") {
+		return "", errors.New("invalid characters in path")
+	}
+
+	// Remove duplicate slashes and handle relative paths
+	parts := strings.Split(cleaned, "/")
+	var result []string
+
+	for _, part := range parts {
+		if part == "" {
+			continue // Skip empty parts (multiple slashes)
+		}
+		if part == ".." {
+			if len(result) > 0 {
+				result = result[:len(result)-1] // Remove last element for ../
+			}
+			continue
+		}
+		if part == "." {
+			continue // Skip current directory references
+		}
+		result = append(result, part)
+	}
+
+	return strings.Join(result, "/"), nil
 }
 
 // getClient returns an http client with appropriate timeouts

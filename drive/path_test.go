@@ -16,7 +16,7 @@ func TestParseDrivePath(t *testing.T) {
 		{"/path/to/file", "path/to/file", false},
 		{"path/to/file/", "path/to/file", false},
 		{"//multiple//slashes//", "multiple/slashes", false},
-		{"/path/with/../relative", "path/with/relative", false},
+		{"/path/with/../relative", "path/relative", false}, // .. should resolve correctly
 		{"/path/with/*/asterisk", "", true},
 		{"/path/with/?/question", "", true},
 	}

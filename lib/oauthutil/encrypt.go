@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/oauth2"
 )
@@ -182,6 +183,13 @@ func IsTokenEncrypted(path string) (bool, error) {
 		return false, fmt.Errorf("failed to read file: %w", err)
 	}
 
+	content := strings.TrimSpace(string(data))
+
+	// Check if it has the encrypted token prefix
+	if strings.HasPrefix(content, "ENCRYPTED:") {
+		return true, nil
+	}
+
 	// Try to unmarshal as plain JSON
 	var token oauth2.Token
 	if err := json.Unmarshal(data, &token); err == nil {
@@ -189,8 +197,9 @@ func IsTokenEncrypted(path string) (bool, error) {
 		return false, nil
 	}
 
-	// Try to decode as base64
-	_, err = base64.StdEncoding.DecodeString(string(data))
+	// If it's not JSON and doesn't have the prefix, it might be an old format
+	// Try to decode as base64 (legacy format)
+	_, err = base64.StdEncoding.DecodeString(content)
 	if err != nil {
 		return false, errors.New("file is neither plain JSON nor encrypted format")
 	}

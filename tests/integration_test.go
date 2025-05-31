@@ -22,6 +22,12 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	// Check if integration tests should run
+	if os.Getenv("TEST_GDRIVE_ACCESS") == "" {
+		fmt.Println("Skipping integration tests - set TEST_GDRIVE_ACCESS environment variable to run")
+		os.Exit(0)
+	}
+
 	// Setup
 	ctx := context.Background()
 	var err error
